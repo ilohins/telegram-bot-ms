@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.net.URI;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Component
 public class TelegramBotAPI {
@@ -57,10 +59,19 @@ public class TelegramBotAPI {
 
         URI uri = URI.create(uriString);
         WebClient.ResponseSpec response = webclient.get().uri(uri).retrieve();
-        String result = response.bodyToMono(String.class).block();
+        CompletableFuture<String> resultFuture = response.bodyToMono(String.class).toFuture();
 
-        TelegramResponse responseObj = g.fromJson(result, TelegramResponse.class);
-        return responseObj.getOk();
+        String result = null;
+        try {
+            result = resultFuture.get();
+            TelegramResponse responseObj = g.fromJson(result, TelegramResponse.class);
+            return responseObj.getOk();
+        } catch (Exception e) {
+            System.err.println("Request failed");
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
 }
